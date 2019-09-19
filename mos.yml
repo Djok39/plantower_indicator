@@ -1,0 +1,78 @@
+author: Djok_39
+description: Air quality indicator
+# arch: ESP32
+version: 1.0
+manifest_version: 2017-05-18
+libs_version: ${mos.version}
+modules_version: ${mos.version}
+mongoose_os_version: ${mos.version}
+
+config_schema:
+  - ["node.name", "s", "pms7003", {title: "device name"}]
+  # you can test MQTT functionality on http://www.hivemq.com/demos/websocket-client/
+  - ["mqtt.server", "broker.hivemq.com:1883"]
+  - ["mqtt.enable", false]
+  - ["rpc.mqtt.enable", false]  # Disable remote control over MQTT
+  # - ["mqtt.ssl_ca_cert", "mqtt_ca.crt"]
+  # - ["mqtt.user", "abc"]
+  # - ["mqtt.pass", ""]
+  - ["wifi.ap.enable", false]
+  - ["wifi.ap.disable_after", 360]
+  - ["wifi.sta.ssid", "AndroidAP"]
+  - ["wifi.sta.pass", "1234567890"]
+  - ["wifi.sta.enable", false]
+  - ["wifi.sta2.ssid", "abc"]
+  - ["wifi.sta2.pass", ""]
+  - ["wifi.sta2.enable", false]
+  # - ["debug.level", 2]
+  # - ["dash.token", 123]
+  - ["dash.enable", false]
+  - ["ssd1306.i2c.sda_gpio", 4]
+  - ["ssd1306.i2c.scl_gpio", 5]
+  - ["i2c.sda_gpio", 4]
+  - ["i2c.scl_gpio", 5]
+  - ["i2c.enable", true]
+  - ["mq.mult", "i", 14, {title: "power duty cycle time multiplier"}]
+  - ["mq.div", "i", 50, {title: "power duty cycle time divider"}]
+
+sources:
+  - src
+
+includes:
+  - include
+
+tags:
+  - js
+  - MQ7
+  - PMS7003
+  - ssd1306
+
+filesystem:
+  - fs
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/ca-bundle
+  - origin: https://github.com/mongoose-os-libs/core
+  - origin: https://github.com/mongoose-os-libs/rpc-service-config
+  - origin: https://github.com/mongoose-os-libs/rpc-service-fs
+  - origin: https://github.com/mongoose-os-libs/rpc-service-gpio
+  - origin: https://github.com/mongoose-os-libs/rpc-service-ota
+  - origin: https://github.com/mongoose-os-libs/rpc-uart
+  - origin: https://github.com/mongoose-os-libs/mjs
+  - origin: https://github.com/mongoose-os-libs/dash
+  # - origin: https://github.com/mongoose-os-libs/sntp
+  # - origin: https://github.com/mongoose-os-libs/shadow
+  - origin: https://github.com/mongoose-os-libs/http-server
+  - origin: https://github.com/mongoose-os-libs/ota-http-server
+  # - origin: https://github.com/mongoose-os-libs/ota-http-client
+  # - origin: https://github.com/mongoose-os-libs/ota-shadow
+  - origin: https://github.com/djok39/ssd1306
+  - origin: https://github.com/mongoose-os-libs/wifi
+  - origin: https://github.com/mongoose-os-libs/mqtt
+  - origin: https://github.com/mongoose-os-libs/adc
+
+build_vars:
+  ESP_IDF_SDKCONFIG_OPTS: "${build_vars.ESP_IDF_SDKCONFIG_OPTS} CONFIG_TIMER_TASK_STACK_SIZE=4096 CONFIG_ESP32_DEFAULT_CPU_FREQ_80=y CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ=80 CONFIG_LOG_COLORS="
+
+cdefs:
+  MGOS_TASK_STACK_SIZE_BYTES: 16384
