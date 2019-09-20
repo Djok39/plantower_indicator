@@ -9,7 +9,7 @@ load('api_sys.js');
 load('api_mq.js');
 
 let nodeId = Cfg.get('node.name');
-let pmAveraging = 643; // number of points for mean average. 643 is ~10 minuts for pms7003
+let pmMaPoints = 1286; // number of points for mean average. 643 is ~10 minuts for pms7003
 let isOnline = false;
 let methane_value = null;
 let co_value = null;
@@ -63,12 +63,12 @@ Event.on(base + MQ.EVENT_MQ_OFF, function() {
 }, null);
 
 Timer.set(10000, Timer.REPEAT, function() {
-  let pm10 = PMS.pm10(pmAveraging);
+  let pm10 = PMS.pm10(pmMaPoints);
   if (pm10 >= 0.0){
     GPIO.toggle(pin.led);
     MQTT.pub('pm100/' + nodeId, JSON.stringify(pm10), 0);
-    MQTT.pub('pm25/' + nodeId, JSON.stringify(PMS.pm2_5(pmAveraging)), 0);
-    MQTT.pub('pm10/' + nodeId, JSON.stringify(PMS.pm1_0(pmAveraging)), 0);
+    MQTT.pub('pm25/' + nodeId, JSON.stringify(PMS.pm2_5(pmMaPoints)), 0);
+    MQTT.pub('pm10/' + nodeId, JSON.stringify(PMS.pm1_0(pmMaPoints)), 0);
     GPIO.toggle(pin.led);
   };
 }, null);
@@ -80,10 +80,10 @@ let onNarodmonTimer = function(){
     return;
   };
   let pmStr = '';
-  let pm10 = PMS.pm10(pmAveraging);
+  let pm10 = PMS.pm10(pmMaPoints);
   if (pm10 >= 0.0){
-    let pm2_5 = PMS.pm2_5(pmAveraging);
-    let pm1_0 = PMS.pm1_0(pmAveraging);
+    let pm2_5 = PMS.pm2_5(pmMaPoints);
+    let pm1_0 = PMS.pm1_0(pmMaPoints);
     pmStr = '#PM1_0#' + JSON.stringify(pm1_0) + '#PM1\n#PM2_5#' + JSON.stringify(pm2_5) + '#PM2.5\n#PM10_0#' + JSON.stringify(pm10) + '#PM10\n';
   };
   let coStr = co_value ? '#LO#' + JSON.stringify(co_value) + '#ЛОС (MQ7)\n' : '';
@@ -119,19 +119,18 @@ let onNarodmonTimer = function(){
 if (narodUrl){
   Timer.set(150000, 0, function() {
     print('Narodmon timer started, device mac is', getMac());
-    Timer.set(300000, Timer.REPEAT + Timer.RUN_NOW, function() {
-      onNarodmonTimer();
-    }, null);
+    Timer.set(300000, Timer.REPEAT + Timer.RUN_NOW, onNarodmonTimer, null);
   }, null);
 };
 
+// Turn ON or OFF MQ7 sensor
 GPIO.set_button_handler(pin.boot, GPIO.PULL_NONE, GPIO.INT_EDGE_NEG, 50, function() {
   MQ.toggle();
 }, null);
 
-Event.on(Event.CLOUD_CONNECTED, function() {
+Event.on(Net.STATUS_GOT_IP, function() {
   isOnline = true;
-  setState('+');
+  setState('^');
   GPIO.toggle(pin.led);
   MQTT.pub('pm100/' + nodeId, 'null', 0);
   MQTT.pub('pm25/' + nodeId, 'null', 0);
@@ -139,7 +138,12 @@ Event.on(Event.CLOUD_CONNECTED, function() {
   GPIO.toggle(pin.led);
 }, null);
 
-Event.on(Event.CLOUD_DISCONNECTED, function() {
+Event.on(Net.STATUS_CONNECTING, function() {
   isOnline = false;
-  setState('-');
+  setState('...');
+}, null);
+
+Event.on(Net.STATUS_DISCONNECTED, function() {
+  isOnline = false;
+  setState('_');
 }, null);

@@ -27,7 +27,7 @@ typedef struct {
 } plantowerData_t;
 #define PMS_PACKET_SIZE (sizeof(plantowerData_t)+2)
 
-#define PMS_MA_BUFFER_SIZE 1200
+#define PMS_MA_BUFFER_SIZE 3857 // enough for 1 hour averaging
 #define EVENT_GRP_SM MGOS_EVENT_BASE('S', 'M', '_')
 #define PMS_EVENT (EVENT_GRP_SM + 5)
 #define SM_METHANE_AVAILABLE (EVENT_GRP_SM + 1)
@@ -48,7 +48,11 @@ uint8_t response[PMS_PACKET_SIZE];
 
 // points - number of last points to average
 double pm1_0(int points){
-  assert(points <= PMS_MA_BUFFER_SIZE);
+  if (points > PMS_MA_BUFFER_SIZE){
+    LOG(LL_ERROR, ("too many ma points"));
+    return -1.0;
+  };
+
   double sum = 0.0;
   int count=0;
   for(int i=top; count < points; count++, i-- ){
@@ -65,7 +69,11 @@ double pm1_0(int points){
 };
 
 double pm2_5(int points){
-  assert(points <= PMS_MA_BUFFER_SIZE);
+  if (points > PMS_MA_BUFFER_SIZE){
+    LOG(LL_ERROR, ("too many ma points"));
+    return -1.0;
+  };
+
   double sum = 0.0;
   int count=0;
   for(int i=top; count < points; count++, i-- ){
@@ -82,7 +90,11 @@ double pm2_5(int points){
 };
 
 double pm10(int points){
-  assert(points <= PMS_MA_BUFFER_SIZE);
+  if (points > PMS_MA_BUFFER_SIZE){
+    LOG(LL_ERROR, ("too many ma points"));
+    return -1.0;
+  };
+
   double sum = 0.0;
   int count=0;
   for(int i=top; count < points; count++, i-- ){
@@ -205,6 +217,7 @@ static void refresh_dispay()
       mgos_ssd1306_draw_string (oled, x_offset + step*4, y_offset + 3, "CO");
     }
 
+    // Show instant PM value.
     sprintf(str, "%i", _pm10); mgos_ssd1306_draw_string (oled, x_offset + step, y_offset + 15, str);
     sprintf(str, "%i", _pm25); mgos_ssd1306_draw_string (oled, x_offset + step*2, y_offset + 15, str);
     sprintf(str, "%i", _pm100); mgos_ssd1306_draw_string (oled, x_offset + step*3, y_offset + 15, str);
@@ -214,10 +227,11 @@ static void refresh_dispay()
       sprintf(str, "%.0f", co_value); mgos_ssd1306_draw_string (oled, x_offset + step*4, y_offset + 15, str);
     }
     
+    // Show mean average for 5 minutes.
     mgos_ssd1306_draw_string (oled, x_offset, y_offset + 24, "~");
-    sprintf(str, "%.1f", pm1_0(150)); mgos_ssd1306_draw_string (oled, x_offset + step, y_offset + 24, str);
-    sprintf(str, "%.1f", pm2_5(150)); mgos_ssd1306_draw_string (oled, x_offset + step*2, y_offset + 24, str);
-    sprintf(str, "%.1f", pm10(150)); mgos_ssd1306_draw_string (oled, x_offset + step*3, y_offset + 24, str);
+    sprintf(str, "%.1f", pm1_0(321)); mgos_ssd1306_draw_string (oled, x_offset + step, y_offset + 24, str);
+    sprintf(str, "%.1f", pm2_5(321)); mgos_ssd1306_draw_string (oled, x_offset + step*2, y_offset + 24, str);
+    sprintf(str, "%.1f", pm10(321)); mgos_ssd1306_draw_string (oled, x_offset + step*3, y_offset + 24, str);
 
     // other particles
     mgos_ssd1306_select_font(oled, 0);
@@ -269,8 +283,8 @@ static void group_events_cb(int ev, void *evd, void *arg) {
 
 enum mgos_app_init_result mgos_app_init(void) {
   //--- setup OLED display
-  if (mgos_sys_config_get_i2c_enable()){
-    oled = mgos_ssd1306_get_global();
+  oled = mgos_ssd1306_get_global();
+  if (oled){
     mgos_ssd1306_fill_circle (oled, 63, 31, 32, 1); // TODO: show logo
     mgos_ssd1306_refresh(oled, false);
     mgos_event_add_group_handler(EVENT_GRP_SM, group_events_cb, NULL);
@@ -307,6 +321,7 @@ bool pms_init(int uartRx, int uartTx){
 
 bool set_state(char* newState){
   strncpy(szState, newState, 16);
+  refresh_dispay();
   return true;
 };
 

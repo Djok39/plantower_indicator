@@ -3,11 +3,11 @@
 ### Parts list
 - ESP32 dev kit
 - Plantower PMS7003
-- SSD1306 based display
+- SSD1306 based display with i2c
 - MQ7 (or any other MQ*), resistor, logic level mosfet, capacitor ([schematic](docs/schematic-MQ7.png))
 
 ### Description
-Device gather data from two sensors, shows it on OLED and sends to narodmon.ru
+Device gather data from two sensors, shows it on OLED and sends to narodmon.ru.
 To work properly there is necessary only one of sensors.
 
 ### Installation
