@@ -62,17 +62,6 @@ Event.on(base + MQ.EVENT_MQ_OFF, function() {
   methane_value = null;
 }, null);
 
-Timer.set(10000, Timer.REPEAT, function() {
-  let pm10 = PMS.pm10(pmMaPoints);
-  if (pm10 >= 0.0){
-    GPIO.toggle(pin.led);
-    MQTT.pub('pm100/' + nodeId, JSON.stringify(pm10), 0);
-    MQTT.pub('pm25/' + nodeId, JSON.stringify(PMS.pm2_5(pmMaPoints)), 0);
-    MQTT.pub('pm10/' + nodeId, JSON.stringify(PMS.pm1_0(pmMaPoints)), 0);
-    GPIO.toggle(pin.led);
-  };
-}, null);
-
 let narodMsg = null;
 let onNarodmonTimer = function(){
   if (!isOnline){
@@ -131,11 +120,6 @@ GPIO.set_button_handler(pin.boot, GPIO.PULL_NONE, GPIO.INT_EDGE_NEG, 50, functio
 Event.on(Net.STATUS_GOT_IP, function() {
   isOnline = true;
   setState('^');
-  GPIO.toggle(pin.led);
-  MQTT.pub('pm100/' + nodeId, 'null', 0);
-  MQTT.pub('pm25/' + nodeId, 'null', 0);
-  MQTT.pub('pm10/' + nodeId, 'null', 0);
-  GPIO.toggle(pin.led);
 }, null);
 
 Event.on(Net.STATUS_CONNECTING, function() {
@@ -147,3 +131,25 @@ Event.on(Net.STATUS_DISCONNECTED, function() {
   isOnline = false;
   setState('_');
 }, null);
+
+let pmTimer = null;
+MQTT.setEventHandler(function(conn,ev,evdata){
+  if( ev === MQTT.EV_CONNACK ){
+    MQTT.pub('pm100/' + nodeId, 'null', 0);
+    MQTT.pub('pm25/' + nodeId, 'null', 0);
+    MQTT.pub('pm10/' + nodeId, 'null', 0);
+
+    if (!pmTimer){
+      pmTimer = Timer.set(10000, Timer.REPEAT, function() {
+        let pm10 = PMS.pm10(pmMaPoints);
+        if (pm10 >= 0.0){
+          GPIO.toggle(pin.led);
+          MQTT.pub('pm100/' + nodeId, JSON.stringify(pm10), 0);
+          MQTT.pub('pm25/' + nodeId, JSON.stringify(PMS.pm2_5(pmMaPoints)), 0);
+          MQTT.pub('pm10/' + nodeId, JSON.stringify(PMS.pm1_0(pmMaPoints)), 0);
+          GPIO.toggle(pin.led);
+        };
+      }, null); //Timer.set 
+    };
+  };
+},null);

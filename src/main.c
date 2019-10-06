@@ -32,6 +32,7 @@ typedef struct {
 #define PMS_EVENT (EVENT_GRP_SM + 5)
 #define SM_METHANE_AVAILABLE (EVENT_GRP_SM + 1)
 #define SM_CO_AVAILABLE (EVENT_GRP_SM + 2)
+#define SM_MQ_DISABLED (EVENT_GRP_SM + 6)
 
 #define UART_NO2 2
 static char szState[16] = "";
@@ -55,7 +56,7 @@ double pm1_0(int points){
 
   double sum = 0.0;
   int count=0;
-  for(int i=top; count < points; count++, i-- ){
+  for(int i=top-1; count < points; count++, i-- ){
     if (i < 0){
       i = PMS_MA_BUFFER_SIZE-1;
     }
@@ -76,7 +77,7 @@ double pm2_5(int points){
 
   double sum = 0.0;
   int count=0;
-  for(int i=top; count < points; count++, i-- ){
+  for(int i=top-1; count < points; count++, i-- ){
     if (i < 0){
       i = PMS_MA_BUFFER_SIZE-1;
     }
@@ -97,7 +98,7 @@ double pm10(int points){
 
   double sum = 0.0;
   int count=0;
-  for(int i=top; count < points; count++, i-- ){
+  for(int i=top-1; count < points; count++, i-- ){
     if (i < 0){
       i = PMS_MA_BUFFER_SIZE-1;
     }
@@ -148,13 +149,13 @@ static void uart_dispatcher(int uart_no, void *arg) {
 
     // let some warmup time
     if (mgos_uptime() >= 30.0){
+      ma_buffer[top].env_pm10 = pm10;
+      ma_buffer[top].env_pm25 = pm25;
+      ma_buffer[top].env_pm100 = pm100;
       top++;
       if (top >= PMS_MA_BUFFER_SIZE){
         top=0;
       };
-      ma_buffer[top].env_pm10 = pm10;
-      ma_buffer[top].env_pm25 = pm25;
-      ma_buffer[top].env_pm100 = pm100;
     };
     mgos_event_trigger(PMS_EVENT, (void*)NULL);
   }
@@ -278,6 +279,9 @@ static void group_events_cb(int ev, void *evd, void *arg) {
   }else if (ev == SM_METHANE_AVAILABLE){
     methane_value = mq_read_value();
     refresh_dispay();
+  }else if (ev == SM_MQ_DISABLED){
+    co_value = 0.0;
+    methane_value = 0.0;
   }
 }
 
@@ -289,7 +293,7 @@ enum mgos_app_init_result mgos_app_init(void) {
     mgos_ssd1306_refresh(oled, false);
     mgos_event_add_group_handler(EVENT_GRP_SM, group_events_cb, NULL);
 
-    mgos_set_timer(1000 /* ms */, MGOS_TIMER_REPEAT /* repeat */, screensaver_timer_cb, NULL /* arg */);
+    mgos_set_timer(10000 /* ms */, MGOS_TIMER_REPEAT /* repeat */, screensaver_timer_cb, NULL /* arg */);
   };
   return MGOS_APP_INIT_SUCCESS;
 };
